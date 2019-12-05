@@ -10,11 +10,11 @@ router.use(express.json());
 router.post('/', (req, res) => {
   const { text, user_id } = posts.insert(req.body)
   .then( addText => {
-    text || user_id ? res.status(400).json({ errorMessage: "Please provide  and user id for the post."}) : res.status(201).json(addText);
+    text || user_id ? res.status(400).json({ errorMessage: "Please provide name for the user."}) : res.status(201).json(addText);
   })
   .catch( error => {
     console.log(error);
-    res.status(500).json({error: "There was an error while saving the post to the database"  })
+    res.status(500).json({error: "There was an error while saving the user to the database"  })
   });
 });
 
@@ -86,7 +86,20 @@ router.delete('/:id', (req, res) => {
 });
 
 router.put('/:id', (req, res) => {
-  // do your magic!
+  const changes = req.body;
+  const id = req.params.id;
+  const { user } = id;
+
+   user ? res.status(400).json({ errorMessage: " Please provide name for user." }) :
+
+   db.update(id, changes)
+   .then( update => {
+      update === 0 ? res.status(404).json({ message: "The user with the specified ID does not exist." }) : res.status(200).json(user);
+   })
+  .catch(error => {
+    console.log(error);
+    res.status(500).json({ error: "There was an error while saving the user information" });
+  });
 });
 
 //custom middleware
