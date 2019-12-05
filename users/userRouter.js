@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.use(express.json());
 
-router.post('/', (req, res) => {
+router.post('/', validateUser, (req, res) => {
   const { text, user_id } = posts.insert(req.body)
   .then( addText => {
     text || user_id ? res.status(400).json({ errorMessage: "Please provide name for the user."}) : res.status(201).json(addText);
@@ -18,7 +18,7 @@ router.post('/', (req, res) => {
   });
 });
 
-router.post('/:id/posts', (req, res) => {
+router.post('/:id/posts', validateUserId, validatePost, (req, res) => {
   const id = req.params.id;
   const { text, user_id } = req.body
   db.getById(id)
@@ -51,7 +51,7 @@ router.get('/', (req, res) => {
   })
 });
 
-router.get('/:id', (req, res) => {
+router.get('/:id', validateUserId, (req, res) => {
   const id = req.params.id;
   db.getById(id)
   .then(userById => {
@@ -63,7 +63,7 @@ router.get('/:id', (req, res) => {
   });
 });
 
-router.get('/:id/posts', (req, res) => {
+router.get('/:id/posts', validateUserId, validatePost,  (req, res) => {
   db.getUserPosts(req.params.id)
   .then(posts =>{
     !posts ? res.status(500).json({ message: "The post with the specified ID does not exist." }) : res.status(200).json(posts);
@@ -74,7 +74,7 @@ router.get('/:id/posts', (req, res) => {
   });
 });
 
-router.delete('/:id', (req, res) => {
+router.delete('/:id', validateUserId, (req, res) => {
   db.remove(req.params.id)
     .then(removed => {
         removed > 0 ? res.status(200).json({ message: 'post successfully deleted' }) : res.status(404).json({ message: "The post with the specified ID does not exist." });
@@ -85,17 +85,17 @@ router.delete('/:id', (req, res) => {
     })
 });
 
-router.put('/:id', (req, res) => {
+router.put('/:id', validateUserId, (req, res) => {
   const changes = req.body;
   const id = req.params.id;
   const { user } = id;
 
-   user ? res.status(400).json({ errorMessage: " Please provide name for user." }) :
+  user ? res.status(400).json({ errorMessage: " Please provide name for user." }) :
 
-   db.update(id, changes)
-   .then( update => {
+  db.update(id, changes)
+  .then( update => {
       update === 0 ? res.status(404).json({ message: "The user with the specified ID does not exist." }) : res.status(200).json(user);
-   })
+  })
   .catch(error => {
     console.log(error);
     res.status(500).json({ error: "There was an error while saving the user information" });
@@ -105,15 +105,23 @@ router.put('/:id', (req, res) => {
 //custom middleware
 
 function validateUserId(req, res, next) {
-  const id = req.params.id
+  const id = db.getById(req.params.id)
+  .then( userId )
+  userId === id ? req.user = userId 
+  : !name ? res.status(400).json({ message: "missing required name field" }) 
+  : next();
 }
 
 function validateUser(req, res, next) {
-  
+  !req.body ? res.status(400).json({ message: "Missing user data"})
+  : !req.body.name ? res.status(400).json({ message: "Missing required name field" }) 
+  : next();
 }
 
 function validatePost(req, res, next) {
-  // do your magic!
+  !req.body ? res.status(400).json({ message: "Missing post data" }) 
+  : !res.body.text ? res.status(400).json ({ message: "Missing required text field" }) 
+  : next();
 }
 
 module.exports = router;
